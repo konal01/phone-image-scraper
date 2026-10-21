@@ -1,8 +1,48 @@
 import asyncio
 import re
 import urllib.parse
+import sys
+import subprocess
 from typing import List, Dict, Optional, Set
 from playwright.async_api import async_playwright
+
+_browser_lock = None
+
+def _get_browser_lock():
+    global _browser_lock
+    if _browser_lock is None:
+        _browser_lock = asyncio.Lock()
+    return _browser_lock
+
+async def ensure_playwright_browsers() -> bool:
+    """
+    Ensures that Playwright Chromium browser binaries are installed.
+    Runs 'python -m playwright install chromium' if missing.
+    """
+    lock = _get_browser_lock()
+    async with lock:
+        loop = asyncio.get_running_loop()
+        def _install():
+            print("[Playwright] Checking/installing Chromium browser binary...", flush=True)
+            try:
+                res = subprocess.run(
+                    [sys.executable, "-m", "playwright", "install", "chromium"],
+                    capture_output=True,
+                    text=True,
+                    timeout=300
+                )
+                print(f"[Playwright] Install completed with exit code: {res.returncode}", flush=True)
+                if res.stdout:
+                    print(f"[Playwright] stdout: {res.stdout.strip()}", flush=True)
+                if res.stderr:
+                    print(f"[Playwright] stderr: {res.stderr.strip()}", flush=True)
+                return res.returncode == 0
+            except Exception as e:
+                print(f"[Playwright] Install failed: {e}", flush=True)
+                return False
+
+        return await loop.run_in_executor(None, _install)
+
 
 # Official Brand Mapping
 OFFICIAL_BRANDS = {
@@ -1368,10 +1408,22 @@ async def scrape_phones(
     Amazon India, Cashify, and GSMArena studio.
     """
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
-        )
+        browser = None
+        for attempt in range(2):
+            try:
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+                )
+                break
+            except Exception as launch_err:
+                err_text = str(launch_err).lower()
+                if attempt == 0 and ("executable doesn't exist" in err_text or "playwright install" in err_text or "not found" in err_text or "chromium" in err_text):
+                    print(f"[Playwright] Chromium missing ({launch_err}). Downloading automatically now...", flush=True)
+                    await ensure_playwright_browsers()
+                    continue
+                raise launch_err
+
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
             viewport={"width": 1280, "height": 800}

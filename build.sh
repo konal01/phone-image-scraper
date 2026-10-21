@@ -8,7 +8,7 @@ pip install --upgrade pip
 echo "==> Installing Python dependencies..."
 pip install -r requirements.txt
 
-echo "==> Installing Playwright Chromium browser & Linux dependencies..."
-playwright install --with-deps chromium || playwright install chromium
+echo "==> Installing Playwright Chromium browser binary..."
+python -m playwright install chromium
 
 echo "==> Build complete!"

@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from scraper import scrape_phones
+from scraper import scrape_phones, ensure_playwright_browsers
 
 app = FastAPI(title="phone_img_scraper", version="3.0.0")
 
@@ -30,6 +30,13 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["Content-Disposition", "Content-Length"],
 )
+
+
+@app.on_event("startup")
+async def on_startup():
+    print("[Startup] Pre-warming / ensuring Playwright Chromium browser binary...", flush=True)
+    asyncio.create_task(ensure_playwright_browsers())
+
 
 
 def convert_to_jpg_bytes(image_data: bytes, quality: int = 95) -> bytes:
