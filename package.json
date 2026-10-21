@@ -1,0 +1,17 @@
+{
+  "name": "phoneimg-scraper",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Comprehensive Smartphone Multi-Source & All-Color Image Extraction Engine",
+  "scripts": {
+    "build": "node -e \"const fs = require('fs'); fs.rmSync('dist', {recursive: true, force: true}); fs.mkdirSync('dist/static', {recursive: true}); fs.copyFileSync('index.html', 'dist/index.html'); fs.copyFileSync('static/index.html', 'dist/static/index.html'); fs.copyFileSync('static/index.css', 'dist/static/index.css'); fs.copyFileSync('static/app.js', 'dist/static/app.js'); fs.copyFileSync('static/index.css', 'dist/index.css'); fs.copyFileSync('static/app.js', 'dist/app.js'); console.log('Dist built successfully');\"",
+    "start": "python app.py"
+  },
+  "keywords": [
+    "phone-scraper",
+    "fastapi",
+    "playwright"
+  ],
+  "author": "Konal Pradhan",
+  "license": "MIT"
+}

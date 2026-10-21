@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>phone_img_scraper</title>
+  <meta name="description" content="Minimalist phone image scraper">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/index.css">
+</head>
+<body class="light-theme">
+  <div class="app-container">
+    <!-- Minimalist Navbar -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <h1>phone_img_scraper</h1>
+      </div>
+      <div class="header-actions">
+        <a href="https://github.com/konal01/phone-image-scraper" target="_blank" rel="noopener noreferrer" class="github-link" title="View Source on GitHub">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+          </svg>
+          <span>GitHub</span>
+        </a>
+        <button id="backend-config-btn" class="backend-pill" type="button" title="Configure or check Render backend connection">
+          <span class="backend-dot" id="backend-dot"></span>
+          <span id="backend-status-text">Backend: Auto</span>
+        </button>
+        <button id="nav-download-zip" class="btn btn-primary btn-sm" style="display:none;" title="Download all views, colours and sizes as JPG ZIP">
+          Download All (ZIP)
+        </button>
+      </div>
+    </header>
+
+    <!-- App 2-Column Layout -->
+    <div class="app-layout">
+      <!-- Left Filter Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <!-- Sidebar Header / Reset -->
+        <div class="sidebar-header">
+          <span class="sidebar-title">Filters</span>
+          <button type="button" id="reset-filters-btn" class="sidebar-reset-btn" title="Reset all filters">Reset</button>
+        </div>
+
+        <!-- Colour Section -->
+        <div class="sidebar-section">
+          <label class="sidebar-label">Colour</label>
+          <div class="color-options-list" id="sidebar-color-list">
+            <button type="button" class="sidebar-pill active" data-color="all">
+              <span class="pill-dot color-dot-all"></span>
+              <span class="pill-name">All Colours</span>
+              <span class="pill-count" id="count-color-all">0</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Storage Size Section -->
+        <div class="sidebar-section">
+          <label class="sidebar-label">Storage Size</label>
+          <div class="storage-options-list" id="sidebar-storage-list">
+            <button type="button" class="sidebar-pill active" data-storage="all">
+              <span class="pill-name">All Storages</span>
+            </button>
+            <button type="button" class="sidebar-pill" data-storage="128GB">
+              <span class="pill-name">128 GB</span>
+            </button>
+            <button type="button" class="sidebar-pill" data-storage="256GB">
+              <span class="pill-name">256 GB</span>
+            </button>
+            <button type="button" class="sidebar-pill" data-storage="512GB">
+              <span class="pill-name">512 GB</span>
+            </button>
+            <button type="button" class="sidebar-pill" data-storage="1TB">
+              <span class="pill-name">1 TB</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Image Size Section -->
+        <div class="sidebar-section">
+          <label class="sidebar-label">Image Resolution</label>
+          <div class="size-options-list" id="sidebar-size-list">
+            <button type="button" class="sidebar-pill active" data-size="all">
+              <span class="pill-name">All Sizes</span>
+            </button>
+            <button type="button" class="sidebar-pill" data-size="ultra">
+              <span class="pill-name">Ultra HD (1200px+)</span>
+            </button>
+            <button type="button" class="sidebar-pill" data-size="high">
+              <span class="pill-name">High Res (800px+)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Angle / View Section -->
+        <div class="sidebar-section">
+          <label class="sidebar-label">View / Angle</label>
+          <div class="angle-options-list" id="sidebar-angle-list">
+            <button type="button" class="sidebar-pill active" data-angle="all">All Views</button>
+            <button type="button" class="sidebar-pill" data-angle="Back">Back</button>
+            <button type="button" class="sidebar-pill" data-angle="Front">Front</button>
+            <button type="button" class="sidebar-pill" data-angle="Camera">Camera</button>
+            <button type="button" class="sidebar-pill" data-angle="Side">Side</button>
+          </div>
+        </div>
+
+        <!-- Source Section -->
+        <div class="sidebar-section">
+          <label class="sidebar-label">Platform Source</label>
+          <div class="select-wrapper">
+            <select id="source-select">
+              <option value="all" selected>All Sources (Top Priority)</option>
+              <option value="ecommerce">Amazon & Flipkart Only</option>
+              <option value="cashify">Cashify (Refurbished)</option>
+              <option value="fonezone">FoneZone (Refurbished)</option>
+              <option value="gameloot">GameLoot (Pre-owned)</option>
+              <option value="triveniworld">Triveni World (Refurbished)</option>
+              <option value="vlebazaar">VleBazaar (Refurbished/Open Box)</option>
+              <option value="refurbished">All Refurbished Sites (Hub)</option>
+              <option value="flipkart">Flipkart Only</option>
+              <option value="amazon">Amazon Only</option>
+              <option value="ebay">eBay (Global Marketplace)</option>
+              <option value="alamy">Alamy (Studio & Stock)</option>
+              <option value="indiamart">IndiaMART (B2B Catalog)</option>
+              <option value="official">Official Brand Portals</option>
+              <option value="gsmarena">GSMArena Studio</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Max Images Section (16, 64, 256, 512) -->
+        <div class="sidebar-section">
+          <label class="sidebar-label">Max Images</label>
+          <div class="select-wrapper">
+            <select id="limit-select">
+              <option value="16">16 images</option>
+              <option value="64" selected>64 images (Balanced)</option>
+              <option value="256">256 images (Deep)</option>
+              <option value="512">512 images (Maximum)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Sidebar Batch Download -->
+        <div class="sidebar-download-box" id="sidebar-download-box" style="display: none;">
+          <button id="download-zip-btn" class="btn btn-primary btn-block">
+            <span id="zip-btn-text">Download All (ZIP)</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <!-- Top Search Box -->
+        <section class="search-section" aria-label="Search phone images">
+          <form id="search-form" class="search-card" onsubmit="event.preventDefault();">
+            <div class="search-input-wrapper">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input 
+                type="text" 
+                id="query-input" 
+                placeholder="Search phone (e.g. Nothing Phone 2a, Infinix Note 40, OnePlus 12, S24 Ultra, Vivo V40, iPhone 16)..." 
+                autocomplete="off"
+                required
+              >
+              <button type="button" id="clear-search-btn" class="clear-btn" title="Clear input" style="display:none;">
+                ✕
+              </button>
+              <button type="submit" id="search-submit-btn" class="btn btn-primary">
+                <span class="btn-text">Scrape</span>
+                <span class="btn-spinner" style="display: none;"></span>
+              </button>
+            </div>
+
+            <!-- Quick Source Toggle Switches for choosing sites -->
+            <div class="source-toggles-bar" id="source-toggles-bar">
+              <span class="source-toggles-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Choose Sites:
+              </span>
+              <div class="source-toggles-group">
+                <!-- Toggle 0: All Sites (Master Toggle) -->
+                <label class="source-toggle-item active-all" for="toggle-all" id="label-toggle-all" title="Show and scrape from all sites">
+                  <input type="checkbox" id="toggle-all" class="source-toggle-input" value="all" checked>
+                  <span class="source-toggle-switch">
+                    <span class="source-toggle-thumb"></span>
+                  </span>
+                  <span class="source-toggle-content">
+                    <span class="source-toggle-brand-icons">
+                      <span class="brand-dot dot-all" title="All Sites"></span>
+                    </span>
+                    <span class="source-toggle-label">All Sites</span>
+                    <span class="source-toggle-tag">ALL</span>
+                  </span>
+                </label>
+
+                <!-- Toggle 1: Amazon & Flipkart only -->
+                <label class="source-toggle-item is-greyed-out" for="toggle-ecommerce" id="label-toggle-ecommerce" title="Scrape from Amazon & Flipkart">
+                  <input type="checkbox" id="toggle-ecommerce" class="source-toggle-input" value="ecommerce">
+                  <span class="source-toggle-switch">
+                    <span class="source-toggle-thumb"></span>
+                  </span>
+                  <span class="source-toggle-content">
+                    <span class="source-toggle-brand-icons">
+                      <span class="brand-dot dot-amazon" title="Amazon"></span>
+                      <span class="brand-dot dot-flipkart" title="Flipkart"></span>
+                    </span>
+                    <span class="source-toggle-label">Amazon & Flipkart</span>
+                    <span class="source-toggle-tag">STORE</span>
+                  </span>
+                </label>
+
+                <!-- Toggle 2: Cashify only -->
+                <label class="source-toggle-item is-greyed-out" for="toggle-cashify" id="label-toggle-cashify" title="Scrape from Cashify">
+                  <input type="checkbox" id="toggle-cashify" class="source-toggle-input" value="cashify">
+                  <span class="source-toggle-switch">
+                    <span class="source-toggle-thumb"></span>
+                  </span>
+                  <span class="source-toggle-content">
+                    <span class="source-toggle-brand-icons">
+                      <span class="brand-dot dot-cashify" title="Cashify"></span>
+                    </span>
+                    <span class="source-toggle-label">Cashify</span>
+                    <span class="source-toggle-tag">STORE</span>
+                  </span>
+                </label>
+
+                <!-- Toggle 3: FoneZone only -->
+                <label class="source-toggle-item is-greyed-out" for="toggle-fonezone" id="label-toggle-fonezone" title="Scrape from FoneZone">
+                  <input type="checkbox" id="toggle-fonezone" class="source-toggle-input" value="fonezone">
+                  <span class="source-toggle-switch">
+                    <span class="source-toggle-thumb"></span>
+                  </span>
+                  <span class="source-toggle-content">
+                    <span class="source-toggle-brand-icons">
+                      <span class="brand-dot dot-fonezone" title="FoneZone"></span>
+                    </span>
+                    <span class="source-toggle-label">FoneZone</span>
+                    <span class="source-toggle-tag">STORE</span>
+                  </span>
+                </label>
+
+                <!-- Toggle 4: GameLoot only -->
+                <label class="source-toggle-item is-greyed-out" for="toggle-gameloot" id="label-toggle-gameloot" title="Scrape from GameLoot">
+                  <input type="checkbox" id="toggle-gameloot" class="source-toggle-input" value="gameloot">
+                  <span class="source-toggle-switch">
+                    <span class="source-toggle-thumb"></span>
+                  </span>
+                  <span class="source-toggle-content">
+                    <span class="source-toggle-brand-icons">
+                      <span class="brand-dot dot-gameloot" title="GameLoot"></span>
+                    </span>
+                    <span class="source-toggle-label">GameLoot</span>
+                    <span class="source-toggle-tag">STORE</span>
+                  </span>
+                </label>
+
+                <!-- Toggle 5: Triveni World only -->
+                <label class="source-toggle-item is-greyed-out" for="toggle-triveni" id="label-toggle-triveni" title="Scrape from Triveni World">
+                  <input type="checkbox" id="toggle-triveni" class="source-toggle-input" value="triveniworld">
+                  <span class="source-toggle-switch">
+                    <span class="source-toggle-thumb"></span>
+                  </span>
+                  <span class="source-toggle-content">
+                    <span class="source-toggle-brand-icons">
+                      <span class="brand-dot dot-triveni" title="Triveni World"></span>
+                    </span>
+                    <span class="source-toggle-label">Triveni World</span>
+                    <span class="source-toggle-tag">STORE</span>
+                  </span>
+                </label>
+
+                <!-- Toggle 6: VleBazaar only -->
+                <label class="source-toggle-item is-greyed-out" for="toggle-vlebazaar" id="label-toggle-vlebazaar" title="Scrape from VleBazaar">
+                  <input type="checkbox" id="toggle-vlebazaar" class="source-toggle-input" value="vlebazaar">
+                  <span class="source-toggle-switch">
+                    <span class="source-toggle-thumb"></span>
+                  </span>
+                  <span class="source-toggle-content">
+                    <span class="source-toggle-brand-icons">
+                      <span class="brand-dot dot-vlebazaar" title="VleBazaar"></span>
+                    </span>
+                    <span class="source-toggle-label">VleBazaar</span>
+                    <span class="source-toggle-tag">STORE</span>
+                  </span>
+                </label>
+
+                <!-- Toggle 7: All Refurbished Sites (Hub) -->
+                <label class="source-toggle-item is-greyed-out" for="toggle-refurbished" id="label-toggle-refurbished" title="Scrape from all refurbished stores (Cashify, FoneZone, GameLoot, Triveni, VleBazaar)">
+                  <input type="checkbox" id="toggle-refurbished" class="source-toggle-input" value="refurbished">
+                  <span class="source-toggle-switch">
+                    <span class="source-toggle-thumb"></span>
+                  </span>
+                  <span class="source-toggle-content">
+                    <span class="source-toggle-brand-icons">
+                      <span class="brand-dot dot-refurbished" title="All Refurbished"></span>
+                    </span>
+                    <span class="source-toggle-label">All Refurbished</span>
+                    <span class="source-toggle-tag">HUB</span>
+                  </span>
+                </label>
+
+                <!-- Toggle 8: eBay -->
+                <label class="source-toggle-item is-greyed-out" for="toggle-ebay" id="label-toggle-ebay" title="Scrape from eBay Marketplace">
+                  <input type="checkbox" id="toggle-ebay" class="source-toggle-input" value="ebay">
+                  <span class="source-toggle-switch">
+                    <span class="source-toggle-thumb"></span>
+                  </span>
+                  <span class="source-toggle-content">
+                    <span class="source-toggle-brand-icons">
+                      <span class="brand-dot dot-ebay" title="eBay"></span>
+                    </span>
+                    <span class="source-toggle-label">eBay</span>
+                    <span class="source-toggle-tag">MARKET</span>
+                  </span>
+                </label>
+
+                <!-- Toggle 9: Alamy -->
+                <label class="source-toggle-item is-greyed-out" for="toggle-alamy" id="label-toggle-alamy" title="Scrape studio stock photography & cutouts from Alamy">
+                  <input type="checkbox" id="toggle-alamy" class="source-toggle-input" value="alamy">
+                  <span class="source-toggle-switch">
+                    <span class="source-toggle-thumb"></span>
+                  </span>
+                  <span class="source-toggle-content">
+                    <span class="source-toggle-brand-icons">
+                      <span class="brand-dot dot-alamy" title="Alamy"></span>
+                    </span>
+                    <span class="source-toggle-label">Alamy</span>
+                    <span class="source-toggle-tag">STUDIO</span>
+                  </span>
+                </label>
+
+                <!-- Toggle 10: IndiaMART -->
+                <label class="source-toggle-item is-greyed-out" for="toggle-indiamart" id="label-toggle-indiamart" title="Scrape wholesale & distributor catalog from IndiaMART">
+                  <input type="checkbox" id="toggle-indiamart" class="source-toggle-input" value="indiamart">
+                  <span class="source-toggle-switch">
+                    <span class="source-toggle-thumb"></span>
+                  </span>
+                  <span class="source-toggle-content">
+                    <span class="source-toggle-brand-icons">
+                      <span class="brand-dot dot-indiamart" title="IndiaMART"></span>
+                    </span>
+                    <span class="source-toggle-label">IndiaMART</span>
+                    <span class="source-toggle-tag">B2B</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Minimal Model Quick Tags -->
+            <div class="quick-tags" id="quick-tags">
+              <button type="button" class="tag-btn" data-query="Nothing Phone (2a)">Nothing (2a)</button>
+              <button type="button" class="tag-btn" data-query="Infinix Note 40 Pro">Infinix Note 40</button>
+              <button type="button" class="tag-btn" data-query="OnePlus 12">OnePlus 12</button>
+              <button type="button" class="tag-btn" data-query="Samsung Galaxy S24 Ultra">Galaxy S24 Ultra</button>
+              <button type="button" class="tag-btn" data-query="iPhone 16 Pro">iPhone 16 Pro</button>
+              <button type="button" class="tag-btn" data-query="Vivo V40">Vivo V40</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Stats Bar -->
+        <section id="stats-section" class="stats-section" style="display: none;">
+          <div class="stats-left">
+            <span class="stat-pill">
+              Showing <strong id="stat-count">0</strong> images (<span id="stat-time">0.0s</span>)
+            </span>
+          </div>
+
+          <div class="stats-right">
+            <!-- Group by Model Toggle -->
+            <label class="group-toggle-item" for="toggle-group-by-model" id="label-group-by-model" title="Group images by phone model">
+              <input type="checkbox" id="toggle-group-by-model" class="group-toggle-input">
+              <span class="group-toggle-switch">
+                <span class="group-toggle-thumb"></span>
+              </span>
+              <span class="group-toggle-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                Group by Model
+              </span>
+            </label>
+
+            <button id="copy-all-btn" class="btn btn-secondary btn-sm" title="Copy all URLs">
+              Copy URLs
+            </button>
+          </div>
+        </section>
+
+        <!-- Gallery Grid Section -->
+        <section class="gallery-section">
+          <!-- Skeleton Loading -->
+          <div id="loading-state" class="gallery-grid skeleton-grid" style="display: none;"></div>
+
+          <!-- Results Grid -->
+          <div id="results-grid" class="gallery-grid" style="display: none;"></div>
+
+          <!-- Empty State -->
+          <div id="empty-state" class="state-container" style="display: none;">
+            <h2 id="empty-title">No images found</h2>
+            <p id="empty-msg">Try another model or reset the sidebar filters.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Interactive Lightbox Modal / Popup Card with Image Selection -->
+  <div id="lightbox-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <h2 id="modal-phone-title">Phone Model Details</h2>
+          <span class="badge badge-jpg">JPG FORMAT</span>
+        </div>
+        <button id="modal-close-btn" class="modal-close" title="Close (Esc)">✕</button>
+      </div>
+
+      <!-- Main Image Preview -->
+      <div class="modal-image-wrapper">
+        <img id="modal-img" src="" alt="Phone preview">
+      </div>
+
+      <!-- Multi-Image Selection Panel for this Phone -->
+      <div class="modal-selection-panel">
+        <div class="modal-selection-header">
+          <div class="selection-title-group">
+            <span class="selection-heading">Select images to download:</span>
+            <span id="modal-selected-count" class="selection-count">0 selected</span>
+          </div>
+          <div class="selection-quick-btns">
+            <button type="button" id="modal-select-all-btn" class="modal-mini-btn">Select All</button>
+            <button type="button" id="modal-deselect-all-btn" class="modal-mini-btn">Deselect All</button>
+          </div>
+        </div>
+
+        <!-- Scrollable thumbnail selector strip -->
+        <div class="modal-thumbnails-strip" id="modal-thumbnails-strip">
+          <!-- Dynamically populated with checkboxes & thumbnails -->
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <div class="modal-info">
+          <div class="modal-meta-pills">
+            <span id="modal-angle-badge" class="badge badge-angle">Front</span>
+            <span id="modal-source-badge" class="badge">Flipkart</span>
+            <span id="modal-color-badge" class="badge badge-color">Color</span>
+            <span id="modal-storage-badge" class="badge" style="display:none;">Storage</span>
+          </div>
+          <p class="modal-filename-box">
+            <code id="modal-filename-display">filename.jpg</code>
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button id="modal-copy-btn" class="btn btn-secondary">Copy Link</button>
+          <button id="modal-download-single-btn" class="btn btn-secondary" title="Download only this viewed image as .jpg">
+            Download This (.jpg)
+          </button>
+          <button id="modal-download-selected-btn" class="btn btn-primary" title="Download all selected views of this phone">
+            <span id="modal-download-selected-text">Download Selected (JPG)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backend Configuration Modal -->
+  <div id="backend-modal" class="lightbox-modal" style="display:none;">
+    <div class="modal-backdrop" id="backend-modal-backdrop"></div>
+    <div class="backend-modal-content">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 class="modal-title" style="font-size:17px; font-weight:700;">Backend Connection Settings</h3>
+        <button id="backend-modal-close" class="modal-close" type="button" style="background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-muted);">&times;</button>
+      </div>
+      <div class="backend-modal-body">
+        <p class="backend-modal-desc">
+          Connect this Vercel frontend to your deployed Render backend (e.g. <code>https://your-service.onrender.com</code>), or leave blank for local/proxy mode.
+        </p>
+        <div class="backend-input-group">
+          <label for="backend-url-input">Render Backend URL</label>
+          <input type="url" id="backend-url-input" placeholder="https://phoneimg-scraper-backend.onrender.com" autocomplete="off" />
+        </div>
+        <div id="backend-ping-result" class="backend-ping-result"></div>
+        <div class="backend-modal-actions">
+          <button id="backend-test-btn" type="button" class="btn btn-secondary">Test Connection</button>
+          <button id="backend-save-btn" type="button" class="btn btn-primary">Save & Connect</button>
+          <button id="backend-reset-btn" type="button" class="btn btn-secondary">Reset (Auto)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
