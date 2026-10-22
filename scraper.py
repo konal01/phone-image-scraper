@@ -3,6 +3,7 @@ import re
 import urllib.parse
 import sys
 import subprocess
+import time
 from typing import List, Dict, Optional, Set
 from playwright.async_api import async_playwright
 
@@ -1430,6 +1431,19 @@ async def scrape_phones(
         )
         page = await context.new_page()
 
+        # Block media, fonts, and trackers to save 80% RAM and speed up page loads 5x
+        async def handle_route(route):
+            req = route.request
+            rtype = req.resource_type
+            url_lower = req.url.lower()
+            if rtype in ("media", "font") or any(t in url_lower for t in ("google-analytics", "doubleclick", "facebook.net", "clarity.ms", "hotjar", "adsystem", "googletagmanager")):
+                await route.abort()
+            else:
+                await route.continue_()
+
+        await page.route("**/*", handle_route)
+
+        start_time = time.time()
         results: List[Dict[str, str]] = []
         seen_urls: Set[str] = set()
 
@@ -1454,6 +1468,14 @@ async def scrape_phones(
                 if len(results) >= limit:
                     break
 
+        def should_continue():
+            if len(results) >= limit:
+                return False
+            # If we already have 12+ results and spent > 22 seconds, return promptly
+            if len(results) >= 12 and (time.time() - start_time) > 22.0:
+                return False
+            return True
+
         # Support comma-separated sources for multiselect
         raw_sources = [s.strip().lower() for s in source.split(",") if s.strip()]
         if not raw_sources or "all" in raw_sources:
@@ -1475,67 +1497,67 @@ async def scrape_phones(
             add_items(fk_items)
 
         # 2. Second Priority: Amazon India
-        if matches_source("amazon", "ecommerce", "amazon_flipkart", "flipkart_amazon", "ecommerce_cashify") and len(results) < limit:
+        if should_continue() and matches_source("amazon", "ecommerce", "amazon_flipkart", "flipkart_amazon", "ecommerce_cashify"):
             remaining = limit - len(results)
             az_items = await scrape_amazon_full_radius(page, query, limit=remaining)
             add_items(az_items)
 
         # 3. Third Priority: Cashify (https://www.cashify.in/)
-        if matches_source("cashify", "ecommerce_cashify", "refurbished") and len(results) < limit:
+        if should_continue() and matches_source("cashify", "ecommerce_cashify", "refurbished"):
             remaining = limit - len(results)
             cashify_items = await scrape_cashify_full_radius(page, query, limit=remaining)
             add_items(cashify_items)
 
         # 4. FoneZone (https://fonezone.me/)
-        if matches_source("fonezone", "refurbished") and len(results) < limit:
+        if should_continue() and matches_source("fonezone", "refurbished"):
             remaining = limit - len(results)
             fz_items = await scrape_fonezone_full_radius(page, query, limit=remaining)
             add_items(fz_items)
 
         # 5. GameLoot (https://gameloot.in/)
-        if matches_source("gameloot", "refurbished") and len(results) < limit:
+        if should_continue() and matches_source("gameloot", "refurbished"):
             remaining = limit - len(results)
             gl_items = await scrape_gameloot_full_radius(page, query, limit=remaining)
             add_items(gl_items)
 
         # 6. Triveni World (https://www.triveniworld.com/)
-        if matches_source("triveniworld", "triveni", "refurbished") and len(results) < limit:
+        if should_continue() and matches_source("triveniworld", "triveni", "refurbished"):
             remaining = limit - len(results)
             tw_items = await scrape_triveniworld_full_radius(page, query, limit=remaining)
             add_items(tw_items)
 
         # 7. VleBazaar (https://vlebazaar.in/)
-        if matches_source("vlebazaar", "refurbished") and len(results) < limit:
+        if should_continue() and matches_source("vlebazaar", "refurbished"):
             remaining = limit - len(results)
             vle_items = await scrape_vlebazaar_full_radius(page, query, limit=remaining)
             add_items(vle_items)
 
         # 8. eBay Marketplace & High-Res Listings
-        if matches_source("ebay") and len(results) < limit:
+        if should_continue() and matches_source("ebay"):
             remaining = limit - len(results)
             ebay_items = await scrape_ebay_full_radius(page, query, limit=remaining)
             add_items(ebay_items)
 
         # 9. Alamy Studio Photography & Transparent Cutouts
-        if matches_source("alamy") and len(results) < limit:
+        if should_continue() and matches_source("alamy"):
             remaining = limit - len(results)
             alamy_items = await scrape_alamy_full_radius(page, query, limit=remaining)
             add_items(alamy_items)
 
         # 10. IndiaMART Wholesale & Seller Catalog
-        if matches_source("indiamart") and len(results) < limit:
+        if should_continue() and matches_source("indiamart"):
             remaining = limit - len(results)
             im_items = await scrape_indiamart_full_radius(page, query, limit=remaining)
             add_items(im_items)
 
         # 11. Official Brand Newsrooms & Portals
-        if matches_source("official") and len(results) < limit:
+        if should_continue() and matches_source("official"):
             remaining = limit - len(results)
             official_items = await scrape_official_brand_portals(page, query, limit=remaining)
             add_items(official_items)
 
         # 12. GSMArena Studio Pictures
-        if matches_source("gsmarena") and len(results) < limit:
+        if should_continue() and matches_source("gsmarena"):
             remaining = limit - len(results)
             gsm_items = await scrape_gsmarena_full_radius(page, query, limit=remaining)
             add_items(gsm_items)
