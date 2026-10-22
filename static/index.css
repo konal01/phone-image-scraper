@@ -1959,3 +1959,61 @@ body.light-theme {
   flex-wrap: wrap;
 }
 
+/* ==========================================================================
+   Media Types & Video Cards
+   ========================================================================== */
+.media-type-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.badge-video {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px;
+}
+
+.badge-feature-plate {
+  background: #7c3aed !important;
+  color: #ffffff !important;
+}
+
+.card-media.is-video {
+  position: relative;
+  cursor: pointer;
+}
+
+.card-media.is-video::after {
+  content: '▶';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.card-media.is-video:hover::after {
+  background: #dc2626;
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.modal-thumb-card.is-video-thumb .thumb-label::before {
+  content: '▶ ';
+  color: #dc2626;
+}
+
+

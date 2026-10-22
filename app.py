@@ -87,6 +87,9 @@ class ImageItem(BaseModel):
     storage: Optional[str] = None
     angle: Optional[str] = None
     model: Optional[str] = None
+    media_type: Optional[str] = "image"
+    thumbnail: Optional[str] = None
+    watch_url: Optional[str] = None
 
 
 class DownloadZipRequest(BaseModel):
@@ -178,7 +181,7 @@ async def api_proxy_image(url: str, filename: Optional[str] = None):
 
 @app.post("/api/download-zip")
 async def api_download_zip(req: DownloadZipRequest):
-    """Downloads all given images, converts all to .jpg format, and packages into a ZIP archive."""
+    """Downloads all given images, converts all to .jpg format, and packages into a ZIP archive with video links manifest."""
     if not req.items:
         raise HTTPException(status_code=400, detail="No items to download.")
 
@@ -189,9 +192,16 @@ async def api_download_zip(req: DownloadZipRequest):
     }
 
     zip_buffer = io.BytesIO()
+    video_entries = []
     async with httpx.AsyncClient(timeout=30.0, follow_redirects=True, verify=False) as client:
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for idx, item in enumerate(req.items, start=1):
+                # Cleanly handle videos without attempting image conversion
+                if getattr(item, "media_type", "image") == "video":
+                    watch = getattr(item, "watch_url", "") or item.url
+                    video_entries.append(f"{idx:02d}. {item.title}\n    Type: Official Video Trailer / Feature Film\n    Watch Online: {watch}\n")
+                    continue
+
                 try:
                     u = item.url.strip()
                     if u.startswith("//"):
@@ -222,6 +232,14 @@ async def api_download_zip(req: DownloadZipRequest):
                         zip_file.writestr(target_filename, jpg_bytes)
                 except Exception:
                     continue
+
+            if video_entries:
+                manifest_txt = (
+                    f"Official Videos & Trailers for {req.query}\n"
+                    f"{'='*50}\n\n"
+                    + "\n".join(video_entries)
+                )
+                zip_file.writestr("Official_Videos_Watch_List.txt", manifest_txt)
 
     zip_bytes = zip_buffer.getvalue()
     safe_query = re.sub(r'[^a-zA-Z0-9_\-]', '_', req.query) or "phones"

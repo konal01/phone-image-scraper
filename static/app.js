@@ -30,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
 
   // Sidebar Elements
+  const sidebarMediaList = document.getElementById('sidebar-media-list');
+  const countMediaAll = document.getElementById('count-media-all');
+  const countMediaPhoto = document.getElementById('count-media-photo');
+  const countMediaVideo = document.getElementById('count-media-video');
   const sidebarColorList = document.getElementById('sidebar-color-list');
   const sidebarStorageList = document.getElementById('sidebar-storage-list');
   const sidebarSizeList = document.getElementById('sidebar-size-list');
@@ -59,6 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalPhoneTitle = document.getElementById('modal-phone-title');
   const modalCloseBtn = document.getElementById('modal-close-btn');
   const modalImg = document.getElementById('modal-img');
+  const modalVideoWrapper = document.getElementById('modal-video-wrapper');
+  const modalVideoIframe = document.getElementById('modal-video-iframe');
+  const modalWatchVideoBtn = document.getElementById('modal-watch-video-btn');
   const modalFilenameDisplay = document.getElementById('modal-filename-display');
   const modalAngleBadge = document.getElementById('modal-angle-badge');
   const modalSourceBadge = document.getElementById('modal-source-badge');
@@ -211,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedModalUrls = new Set();
 
   let activeFilters = {
+    media: 'all',
     color: 'all',
     storage: 'all',
     size: 'all',
@@ -579,6 +587,17 @@ document.addEventListener('DOMContentLoaded', () => {
    * Populate Sidebar Options dynamically
    */
   function populateSidebarOptions(items) {
+    // 0. Media Type Counts
+    let photoCount = 0;
+    let videoCount = 0;
+    items.forEach(it => {
+      if (it.media_type === 'video') videoCount++;
+      else photoCount++;
+    });
+    if (countMediaAll) countMediaAll.textContent = items.length;
+    if (countMediaPhoto) countMediaPhoto.textContent = photoCount;
+    if (countMediaVideo) countMediaVideo.textContent = videoCount;
+
     // 1. Colours
     const colorCounts = {};
     const storageCounts = {};
@@ -644,6 +663,17 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
    * Filter handling
    */
+  if (sidebarMediaList) {
+    sidebarMediaList.addEventListener('click', (e) => {
+      const pill = e.target.closest('.sidebar-pill');
+      if (!pill) return;
+      sidebarMediaList.querySelectorAll('.sidebar-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      activeFilters.media = pill.getAttribute('data-media') || 'all';
+      applyFilters();
+    });
+  }
+
   sidebarColorList.addEventListener('click', (e) => {
     const pill = e.target.closest('.sidebar-pill');
     if (!pill) return;
@@ -688,7 +718,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function resetFilters() {
-    activeFilters = { color: 'all', storage: 'all', size: 'all', angle: 'all' };
+    activeFilters = { media: 'all', color: 'all', storage: 'all', size: 'all', angle: 'all' };
+    if (sidebarMediaList) {
+      sidebarMediaList.querySelectorAll('.sidebar-pill').forEach(p => {
+        p.classList.toggle('active', p.getAttribute('data-media') === 'all');
+      });
+    }
     sidebarColorList.querySelectorAll('.sidebar-pill').forEach(p => {
       p.classList.toggle('active', p.getAttribute('data-color') === 'all');
     });
@@ -709,6 +744,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const effectiveSources = getEffectiveSources();
 
     filteredResults = rawResults.filter(item => {
+      // Media Type
+      if (activeFilters.media !== 'all') {
+        const isVid = item.media_type === 'video';
+        if (activeFilters.media === 'video' && !isVid) return false;
+        if (activeFilters.media === 'image' && isVid) return false;
+      }
+
       // Source filter (multiselect matching)
       if (!itemMatchesSource(item, effectiveSources)) {
         return false;
@@ -787,9 +829,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const card = document.createElement('article');
     card.className = 'image-card';
 
+    const isVideo = item.media_type === 'video';
     let sourceBadgeClass = 'badge';
     const s = (item.source || '').toLowerCase();
-    if (s.includes('flipkart')) sourceBadgeClass = 'badge badge-flipkart';
+    if (isVideo) sourceBadgeClass = 'badge badge-video';
+    else if (s.includes('flipkart')) sourceBadgeClass = 'badge badge-flipkart';
     else if (s.includes('amazon')) sourceBadgeClass = 'badge badge-amazon';
     else if (s.includes('cashify')) sourceBadgeClass = 'badge badge-cashify';
     else if (s.includes('fonezone')) sourceBadgeClass = 'badge badge-fonezone';
@@ -802,17 +846,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const storageBadgeHtml = (item.storage && item.storage !== 'All') 
       ? `<span class="badge" title="Storage Size: ${escapeHtml(item.storage)}">💾 ${escapeHtml(item.storage)}</span>` 
       : '';
-    const filenameText = item.filename || `phone_image_${index + 1}.jpg`;
+    const angleBadgeHtml = item.angle === 'Feature_Plate'
+      ? `<span class="badge badge-feature-plate">INFOGRAPHIC</span>`
+      : '';
+    const filenameText = item.filename || (isVideo ? `phone_video_${index + 1}.mp4` : `phone_image_${index + 1}.jpg`);
+    const displayThumb = item.thumbnail || item.url;
 
     card.innerHTML = `
-      <div class="card-media" title="View fullscreen">
-        <img src="${item.url}" alt="${escapeHtml(item.title)}" loading="lazy">
+      <div class="card-media ${isVideo ? 'is-video' : ''}" title="${isVideo ? 'Play video trailer' : 'View fullscreen'}">
+        <img src="${displayThumb}" alt="${escapeHtml(item.title)}" loading="lazy">
         <div class="card-badges">
-          <span class="${sourceBadgeClass}">${escapeHtml(item.source || 'Web')}</span>
-          <span class="badge badge-color">${escapeHtml(colorText)}</span>
+          <span class="${sourceBadgeClass}">${isVideo ? '▶ VIDEO' : escapeHtml(item.source || 'Web')}</span>
+          ${angleBadgeHtml}
+          ${!isVideo ? `<span class="badge badge-color">${escapeHtml(colorText)}</span>` : ''}
         </div>
         <div class="card-hover-overlay">
-          <div class="overlay-btn">View</div>
+          <div class="overlay-btn">${isVideo ? '▶ Play Video' : 'View'}</div>
         </div>
       </div>
       <div class="card-body">
@@ -824,12 +873,13 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
         <div class="card-actions">
-          <button class="card-btn card-btn-copy" data-url="${item.url}" title="Copy URL">
+          <button class="card-btn card-btn-copy" data-url="${isVideo ? (item.watch_url || item.url) : item.url}" title="Copy URL">
             Copy URL
           </button>
-          <button class="card-btn card-btn-download" title="Download: ${escapeHtml(filenameText)}">
-            Download
-          </button>
+          ${isVideo 
+            ? `<a href="${item.watch_url || item.url}" target="_blank" rel="noopener noreferrer" class="card-btn card-btn-download" style="text-decoration:none; text-align:center;">Watch Online</a>`
+            : `<button class="card-btn card-btn-download" title="Download: ${escapeHtml(filenameText)}">Download</button>`
+          }
         </div>
       </div>
     `;
@@ -844,15 +894,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyBtn = card.querySelector('.card-btn-copy');
     copyBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      copyToClipboard(item.url, 'Copied URL');
+      const targetUrl = isVideo ? (item.watch_url || item.url) : item.url;
+      copyToClipboard(targetUrl, 'Copied URL');
     });
 
-    // Event: Download button
-    const downloadBtn = card.querySelector('.card-btn-download');
-    downloadBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      downloadSingleImage(item.url, filenameText);
-    });
+    // Event: Download button (for images)
+    const downloadBtn = card.querySelector('button.card-btn-download');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        downloadSingleImage(item.url, filenameText);
+      });
+    }
 
     return card;
   }
@@ -1057,13 +1110,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function setModalPreview(item) {
+    if (!item) return;
+    const isVid = item.media_type === 'video';
+    if (isVid) {
+      modalImg.style.display = 'none';
+      if (modalVideoWrapper) modalVideoWrapper.style.display = 'block';
+      if (modalVideoIframe) modalVideoIframe.src = item.url;
+      if (modalWatchVideoBtn) {
+        modalWatchVideoBtn.style.display = 'inline-flex';
+        modalWatchVideoBtn.href = item.watch_url || item.url;
+      }
+      if (modalDownloadSingleBtn) modalDownloadSingleBtn.style.display = 'none';
+    } else {
+      modalImg.style.display = 'block';
+      modalImg.src = item.url;
+      if (modalVideoWrapper) modalVideoWrapper.style.display = 'none';
+      if (modalVideoIframe) modalVideoIframe.src = '';
+      if (modalWatchVideoBtn) modalWatchVideoBtn.style.display = 'none';
+      if (modalDownloadSingleBtn) modalDownloadSingleBtn.style.display = 'inline-flex';
+    }
+    updateModalMeta(item);
+  }
+
   function openModal(item) {
     activeModalItem = item;
-    modalImg.src = item.url;
+    setModalPreview(item);
     modalPhoneTitle.textContent = item.model || item.title || 'Phone Views';
-    updateModalMeta(item);
 
-    // Identify all images belonging to this specific phone
+    // Identify all images and videos belonging to this specific phone
     const targetModel = (item.model || '').toLowerCase().trim();
     const targetColor = (item.color || '').toLowerCase().trim();
 
@@ -1074,7 +1149,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return rModel === targetModel && (targetColor === '' || targetColor === 'standard / official' || rColor === targetColor);
     });
 
-    // 2. Also find all other colorways and faces of this model
+    // 2. Also find all other colorways, feature plates, and videos of this model
     const otherVariantFaces = rawResults.filter(r => {
       const rModel = (r.model || '').toLowerCase().trim();
       return rModel === targetModel && !exactVariantFaces.includes(r);
@@ -1099,8 +1174,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Populate thumbnail strip
     modalThumbnailsStrip.innerHTML = '';
     modalPhoneItems.forEach((thumbItem, idx) => {
+      const isVid = thumbItem.media_type === 'video';
       const card = document.createElement('div');
-      card.className = `modal-thumb-card ${thumbItem.url === item.url ? 'active-preview' : ''} selected-for-download`;
+      card.className = `modal-thumb-card ${thumbItem.url === item.url ? 'active-preview' : ''} ${isVid ? 'is-video-thumb' : ''} selected-for-download`;
       card.dataset.url = thumbItem.url;
 
       // Checkbox wrapper
@@ -1129,7 +1205,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const imgWrapper = document.createElement('div');
       imgWrapper.className = 'thumb-img-wrapper';
       const thumbImg = document.createElement('img');
-      thumbImg.src = thumbItem.url;
+      thumbImg.src = thumbItem.thumbnail || thumbItem.url;
       thumbImg.alt = thumbItem.angle || `View ${idx + 1}`;
       thumbImg.loading = 'lazy';
       imgWrapper.appendChild(thumbImg);
@@ -1137,7 +1213,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Label (Angle + Color)
       const label = document.createElement('div');
       label.className = 'thumb-label';
-      const angle = thumbItem.angle || `View ${idx + 1}`;
+      const angle = isVid ? '▶ Trailer' : (thumbItem.angle || `View ${idx + 1}`);
       label.textContent = angle;
       label.title = `${angle} • ${thumbItem.color || 'Standard'}`;
 
@@ -1149,8 +1225,7 @@ document.addEventListener('DOMContentLoaded', () => {
       card.addEventListener('click', (e) => {
         if (e.target === checkbox) return;
         activeModalItem = thumbItem;
-        modalImg.src = thumbItem.url;
-        updateModalMeta(thumbItem);
+        setModalPreview(thumbItem);
 
         modalThumbnailsStrip.querySelectorAll('.modal-thumb-card').forEach(el => {
           el.classList.toggle('active-preview', el.dataset.url === thumbItem.url);
@@ -1167,6 +1242,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function closeModal() {
     modal.style.display = 'none';
     modalImg.src = '';
+    if (modalVideoIframe) modalVideoIframe.src = '';
+    if (modalVideoWrapper) modalVideoWrapper.style.display = 'none';
     activeModalItem = null;
     modalPhoneItems = [];
     selectedModalUrls.clear();

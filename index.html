@@ -79,6 +79,25 @@
           </div>
         </div>
 
+        <!-- Media Type Section (All, Photos, Videos) -->
+        <div class="sidebar-section">
+          <label class="sidebar-label">Media Type</label>
+          <div class="media-type-list" id="sidebar-media-list">
+            <button type="button" class="sidebar-pill active" data-media="all">
+              <span class="pill-name">All Media</span>
+              <span class="pill-count" id="count-media-all">0</span>
+            </button>
+            <button type="button" class="sidebar-pill" data-media="image">
+              <span class="pill-name">📷 Photos</span>
+              <span class="pill-count" id="count-media-photo">0</span>
+            </button>
+            <button type="button" class="sidebar-pill" data-media="video">
+              <span class="pill-name">▶ Videos</span>
+              <span class="pill-count" id="count-media-video">0</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Image Size Section -->
         <div class="sidebar-section">
           <label class="sidebar-label">Image Resolution</label>
@@ -100,10 +119,13 @@
           <label class="sidebar-label">View / Angle</label>
           <div class="angle-options-list" id="sidebar-angle-list">
             <button type="button" class="sidebar-pill active" data-angle="all">All Views</button>
-            <button type="button" class="sidebar-pill" data-angle="Back">Back</button>
             <button type="button" class="sidebar-pill" data-angle="Front">Front</button>
+            <button type="button" class="sidebar-pill" data-angle="Back">Back</button>
             <button type="button" class="sidebar-pill" data-angle="Camera">Camera</button>
             <button type="button" class="sidebar-pill" data-angle="Side">Side</button>
+            <button type="button" class="sidebar-pill" data-angle="Angle_3D">3D Angle</button>
+            <button type="button" class="sidebar-pill" data-angle="Feature_Plate">Story / Infographic</button>
+            <button type="button" class="sidebar-pill" data-angle="Video_Trailer">Video Trailers</button>
           </div>
         </div>
 
@@ -429,9 +451,12 @@
         <button id="modal-close-btn" class="modal-close" title="Close (Esc)">✕</button>
       </div>
 
-      <!-- Main Image Preview -->
+      <!-- Main Image Preview / Video Player -->
       <div class="modal-image-wrapper">
         <img id="modal-img" src="" alt="Phone preview">
+        <div id="modal-video-wrapper" style="display: none; width: 100%; aspect-ratio: 16/9; max-height: 480px; border-radius: 8px; overflow: hidden; background: #000;">
+          <iframe id="modal-video-iframe" style="width: 100%; height: 100%; border: none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
       </div>
 
       <!-- Multi-Image Selection Panel for this Phone -->
@@ -467,6 +492,7 @@
           </p>
         </div>
         <div class="modal-actions">
+          <a id="modal-watch-video-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="display: none;">▶ Watch Video</a>
           <button id="modal-copy-btn" class="btn btn-secondary">Copy Link</button>
           <button id="modal-download-single-btn" class="btn btn-secondary" title="Download only this viewed image as .jpg">
             Download This (.jpg)

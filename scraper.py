@@ -371,6 +371,69 @@ async def scrape_official_brand_portals(page, query: str, limit: int = 40) -> Li
     return results
 
 
+async def scrape_official_videos(page, query: str, limit: int = 4) -> List[Dict[str, str]]:
+    """
+    Scrapes official product launch films, design showcases, trailers, and hands-on demos from YouTube.
+    Returns playable embed URLs, watch URLs, high-res thumbnails, and metadata.
+    """
+    clean_q = re.sub(r'[^\w\s-]', '', query).strip()
+    encoded = clean_q.replace(' ', '+')
+    yt_url = f"https://www.youtube.com/results?search_query={encoded}+official+product+video+trailer"
+    try:
+        await page.goto(yt_url, wait_until="domcontentloaded", timeout=12000)
+        await page.wait_for_timeout(2000)
+        
+        vids = await page.evaluate("""() => {
+            const list = [];
+            const seen = new Set();
+            document.querySelectorAll('ytd-video-renderer').forEach(el => {
+                const a = el.querySelector('#video-title') || el.querySelector('h3 a');
+                if (!a) return;
+                const href = a.href || a.getAttribute('href') || '';
+                const m = href.match(/[?&]v=([^&]+)/);
+                if (!m) return;
+                const vidId = m[1];
+                if (seen.has(vidId)) return;
+                seen.add(vidId);
+                
+                const title = a.getAttribute('title') || a.innerText || '';
+                const img = el.querySelector('img');
+                const thumb = img ? img.src : `https://img.youtube.com/vi/${vidId}/hqdefault.jpg`;
+                
+                if (title && title.trim().length > 3) {
+                    list.push({
+                        title: title.trim().replace(/\\s+/g, ' ').slice(0, 90),
+                        id: vidId,
+                        watch_url: `https://www.youtube.com/watch?v=${vidId}`,
+                        embed_url: `https://www.youtube.com/embed/${vidId}?autoplay=1`,
+                        thumbnail: thumb || `https://img.youtube.com/vi/${vidId}/hqdefault.jpg`
+                    });
+                }
+            });
+            return list;
+        }""")
+        
+        results = []
+        for idx, v in enumerate(vids[:limit], start=1):
+            results.append({
+                "title": v["title"],
+                "url": v["embed_url"],
+                "thumbnail": v["thumbnail"],
+                "watch_url": v["watch_url"],
+                "source": "Official Video",
+                "media_type": "video",
+                "angle": "Video_Trailer",
+                "color": "Official",
+                "storage": "All",
+                "model": clean_q,
+                "filename": f"{sanitize_token(clean_q)}_Official_Video_{idx:02d}.mp4"
+            })
+        return results
+    except Exception as e:
+        print(f"[!] Official video crawl error: {e}")
+        return []
+
+
 async def scrape_flipkart_full_radius(page, query: str, limit: int = 64) -> List[Dict[str, str]]:
     """
     Full-radius deep crawl of Flipkart:
@@ -453,27 +516,78 @@ async def scrape_flipkart_full_radius(page, query: str, limit: int = 64) -> List
             await page.goto(card["href"], wait_until="domcontentloaded", timeout=10000)
             await page.wait_for_timeout(300)
 
+            # Hydrate A+ story plates and feature graphics
+            await page.evaluate("window.scrollTo(0, 1600)")
+            await page.wait_for_timeout(400)
+            await page.evaluate("window.scrollTo(0, 3200)")
+            await page.wait_for_timeout(400)
+
             detailed_title = await page.eval_on_selector('span.B_NuCI, h1', 'el => el.innerText') or card["title"]
 
-            # Extract gallery faces from product page
-            gallery_srcs = await page.evaluate("""() => {
-                const imgs = Array.from(document.querySelectorAll('picture img, div[class*="OfydJ4"] img, img')).map(i => i.src);
-                const unique = [];
-                for (const s of imgs) {
-                    if (!s || !s.includes('/mobile/')) continue;
-                    // Exclude recommendation carousel (530/710) and tiny swatches (80/80)
-                    if (s.includes('/530/710/') || s.includes('/80/80/')) continue;
-                    if (s.includes('cms-brand') || s.includes('batman-returns')) continue;
-                    if (!unique.includes(s)) unique.push(s);
-                }
-                return unique;
+            # Extract gallery faces, variant swatches, and A+ brand story plates from product page
+            page_media = await page.evaluate("""() => {
+                const items = [];
+                const seen_src = new Set();
+                
+                // 1. Primary gallery faces
+                const galleryImgs = document.querySelectorAll('picture img, div[class*="OfydJ4"] img, ul li img');
+                galleryImgs.forEach((img, idx) => {
+                    const s = img.src || img.getAttribute('data-src') || '';
+                    if (!s || !s.includes('rukminim') || s.includes('/promos/') || s.includes('/www/')) return;
+                    if (s.includes('/mobile/') && !seen_src.has(s)) {
+                        seen_src.add(s);
+                        items.push({
+                            src: s,
+                            role: 'gallery',
+                            index: idx,
+                            alt: img.alt || ''
+                        });
+                    }
+                });
+
+                // 2. All other page media (A+ Brand CMS story banners, swatches, variant shots)
+                document.querySelectorAll('img').forEach(img => {
+                    const s = img.src || img.getAttribute('data-src') || '';
+                    if (!s || !s.includes('rukminim') || seen_src.has(s)) return;
+                    if (s.includes('fk-cp-zion') || s.includes('/promos/') || s.includes('/www/')) return;
+                    
+                    if (s.includes('prod-fk-cms-brand-images') || s.includes('cms-brand')) {
+                        seen_src.add(s);
+                        items.push({
+                            src: s,
+                            role: 'feature_plate',
+                            alt: img.alt || 'Brand Story Feature Plate'
+                        });
+                    } else if (s.includes('/mobile/')) {
+                        seen_src.add(s);
+                        items.push({
+                            src: s,
+                            role: 'variant_swatch',
+                            alt: img.alt || ''
+                        });
+                    }
+                });
+
+                return items;
             }""")
 
-            for face_idx, g_src in enumerate(gallery_srcs):
+            gallery_count = 0
+            for item in page_media:
+                g_src = item.get("src", "")
+                if not g_src:
+                    continue
                 high_res = upgrade_flipkart_url(g_src)
                 if high_res not in seen:
                     seen.add(high_res)
-                    angle = FACE_SEQUENCE[face_idx] if face_idx < len(FACE_SEQUENCE) else f"Angle_{face_idx + 1:02d}"
+                    role = item.get("role", "gallery")
+                    if role == "gallery":
+                        angle = FACE_SEQUENCE[gallery_count] if gallery_count < len(FACE_SEQUENCE) else f"Angle_{gallery_count + 1:02d}"
+                        gallery_count += 1
+                    elif role == "feature_plate":
+                        angle = "Feature_Plate"
+                    else:
+                        angle = "Color_Lineup"
+
                     meta = extract_detailed_naming(
                         title=detailed_title,
                         query=query,
@@ -489,7 +603,8 @@ async def scrape_flipkart_full_radius(page, query: str, limit: int = 64) -> List
                         "color": meta["color"],
                         "storage": meta["storage"],
                         "angle": meta["angle"],
-                        "model": meta["model"]
+                        "model": meta["model"],
+                        "media_type": "image"
                     })
                     if len(results) >= limit:
                         break
@@ -1441,19 +1556,20 @@ async def scrape_phones(
             for it in new_items:
                 if it["url"] not in seen_urls:
                     seen_urls.add(it["url"])
-                    # Re-index filename
-                    meta = extract_detailed_naming(
-                        title=it["title"],
-                        query=query,
-                        index=len(results) + 1,
-                        angle_hint=it.get("angle", ""),
-                        source_hint=it.get("source", "")
-                    )
-                    it["filename"] = meta["filename"]
-                    it["color"] = meta["color"]
-                    it["storage"] = meta["storage"]
-                    it["angle"] = meta["angle"]
-                    it["model"] = meta["model"]
+                    if it.get("media_type") != "video":
+                        meta = extract_detailed_naming(
+                            title=it["title"],
+                            query=query,
+                            index=len(results) + 1,
+                            angle_hint=it.get("angle", ""),
+                            source_hint=it.get("source", "")
+                        )
+                        it["filename"] = meta["filename"]
+                        it["color"] = meta["color"]
+                        it["storage"] = meta["storage"]
+                        it["angle"] = meta["angle"]
+                        it["model"] = meta["model"]
+                        it["media_type"] = "image"
                     results.append(it)
                 if len(results) >= limit:
                     break
@@ -1461,11 +1577,8 @@ async def scrape_phones(
         def should_continue():
             if len(results) >= limit:
                 return False
-            # When searching All, if we already have 16+ rich images with angles, stop early to keep search snappy (<10s)
-            if is_all and len(results) >= 16:
-                return False
-            # If total time exceeds 20 seconds and we have results, return promptly
-            if len(results) >= 12 and (time.time() - start_time) > 20.0:
+            # When searching All, keep gathering full radius unless safety timeout occurs
+            if len(results) >= 24 and (time.time() - start_time) > 22.0:
                 return False
             return True
 
@@ -1483,9 +1596,18 @@ async def scrape_phones(
                 return True
             return any(c.lower() in sources_set for c in candidates)
 
-        # 1. Highest Priority: Flipkart Deep Variant & Multi-Angle Crawler
+        # 0. Official Launch Trailers, Feature Films & Product Videos
+        if matches_source("video", "videos", "official", "all"):
+            vid_limit = 4 if limit >= 32 else 2
+            official_videos = await scrape_official_videos(page, query, limit=vid_limit)
+            for v in official_videos:
+                if v["url"] not in seen_urls:
+                    seen_urls.add(v["url"])
+                    results.append(v)
+
+        # 1. Highest Priority: Flipkart Deep Variant, Feature Plates & Multi-Angle Crawler
         if matches_source("flipkart", "ecommerce", "amazon_flipkart", "flipkart_amazon", "ecommerce_cashify"):
-            fk_target = limit if (not is_all and len(sources_set) == 1) else max(30, int(limit * 0.6))
+            fk_target = limit if (not is_all and len(sources_set) == 1) else max(36, int(limit * 0.7))
             fk_items = await scrape_flipkart_full_radius(page, query, limit=fk_target)
             add_items(fk_items)
 
@@ -1557,45 +1679,48 @@ async def scrape_phones(
 
         # Ensure priority ranking
         def source_priority_score(item):
+            if item.get("media_type") == "video":
+                return 0
             s = (item.get("source") or "").lower()
             if "flipkart" in s:
-                return 0
-            if "amazon" in s:
                 return 1
-            if "cashify" in s:
+            if "amazon" in s:
                 return 2
-            if "fonezone" in s:
+            if "cashify" in s:
                 return 3
-            if "gameloot" in s:
+            if "fonezone" in s:
                 return 4
-            if "triveni" in s:
+            if "gameloot" in s:
                 return 5
-            if "vlebazaar" in s:
+            if "triveni" in s:
                 return 6
-            if "ebay" in s:
+            if "vlebazaar" in s:
                 return 7
-            if "alamy" in s:
+            if "ebay" in s:
                 return 8
-            if "indiamart" in s:
+            if "alamy" in s:
                 return 9
-            if "official" in s:
+            if "indiamart" in s:
                 return 10
-            if "gsmarena" in s:
+            if "official" in s:
                 return 11
-            return 12
+            if "gsmarena" in s:
+                return 12
+            return 13
 
         results.sort(key=source_priority_score)
 
-        # Re-index filenames with priority order
+        # Re-index filenames with priority order (leaving video .mp4 untouched)
         for idx, item in enumerate(results, start=1):
-            meta = extract_detailed_naming(
-                title=item["title"],
-                query=query,
-                index=idx,
-                angle_hint=item.get("angle", ""),
-                source_hint=item.get("source", "")
-            )
-            item["filename"] = meta["filename"]
+            if item.get("media_type") != "video":
+                meta = extract_detailed_naming(
+                    title=item["title"],
+                    query=query,
+                    index=idx,
+                    angle_hint=item.get("angle", ""),
+                    source_hint=item.get("source", "")
+                )
+                item["filename"] = meta["filename"]
 
         await browser.close()
         return results[:limit]
