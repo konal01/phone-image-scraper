@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'toggle-triveni', value: 'triveniworld', labelId: 'label-toggle-triveni', activeClass: 'active-triveni', name: 'Triveni World' },
     { id: 'toggle-vlebazaar', value: 'vlebazaar', labelId: 'label-toggle-vlebazaar', activeClass: 'active-vlebazaar', name: 'VleBazaar' },
     { id: 'toggle-refurbished', value: 'refurbished', labelId: 'label-toggle-refurbished', activeClass: 'active-refurbished', name: 'All Refurbished Sites' },
+    { id: 'toggle-ebay', value: 'ebay', labelId: 'label-toggle-ebay', activeClass: 'active-ebay', name: 'eBay' },
+    { id: 'toggle-alamy', value: 'alamy', labelId: 'label-toggle-alamy', activeClass: 'active-alamy', name: 'Alamy' },
+    { id: 'toggle-indiamart', value: 'indiamart', labelId: 'label-toggle-indiamart', activeClass: 'active-indiamart', name: 'IndiaMART' },
   ];
 
   // Sidebar Elements
