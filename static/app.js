@@ -93,7 +93,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.RENDER_BACKEND_URL && window.RENDER_BACKEND_URL.trim()) {
       return window.RENDER_BACKEND_URL.trim().replace(/\/+$/, '');
     }
-    return '';
+    // If running locally, use relative path so local server handles it
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return '';
+    }
+    // Production default: connect directly to Render backend (avoids Vercel proxy timeouts)
+    return 'https://phone-image-scraper.onrender.com';
   }
 
   function updateBackendStatusUI() {
@@ -105,12 +110,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const host = new URL(url).hostname;
         backendStatusText.textContent = `API: ${host}`;
       } catch {
-        backendStatusText.textContent = 'API: Custom';
+        backendStatusText.textContent = 'API: Live';
       }
       if (backendDot) {
         backendDot.className = 'backend-dot checking';
       }
-      fetch(`${url}/health`, { signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined })
+      fetch(`${url}/health`, { signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined })
         .then(r => r.json())
         .then(() => {
           if (backendDot) backendDot.className = 'backend-dot';
@@ -119,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (backendDot) backendDot.className = 'backend-dot offline';
         });
     } else {
-      backendStatusText.textContent = 'API: Auto';
+      backendStatusText.textContent = 'API: Local';
       if (backendDot) backendDot.className = 'backend-dot';
     }
   }
@@ -482,6 +487,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const apiBase = getApiBaseUrl();
       const url = `${apiBase}/api/scrape?q=${encodeURIComponent(query)}&source=${encodeURIComponent(source)}&limit=${limit}`;
       const res = await fetch(url);
+      if (!res.ok) {
+        let detail = '';
+        try {
+          const errData = await res.json();
+          detail = errData.error || errData.detail || JSON.stringify(errData);
+        } catch {
+          detail = await res.text();
+        }
+        throw new Error(detail || `Server returned HTTP ${res.status}`);
+      }
       const data = await res.json();
 
       setLoadingState(false);
@@ -501,8 +516,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err) {
       setLoadingState(false);
-      showEmptyState('Network Error', 'Could not reach server.');
-      showToast('Scraping failed', 'error');
+      const isNetworkErr = err.name === 'AbortError' || (err.message && err.message.toLowerCase().includes('fetch'));
+      const errorMsg = isNetworkErr
+        ? 'Could not reach Render backend. On Render Free Tier, the backend service spins down after 15 min of inactivity and takes ~45 seconds to wake up. Please wait 15 seconds and click Scrape again.'
+        : (err.message || 'Could not reach server.');
+      showEmptyState('Connection / Scrape Error', errorMsg);
+      showToast(isNetworkErr ? 'Backend waking up... please retry shortly' : `Scraping failed: ${err.message}`, 'error');
     }
   }
 
