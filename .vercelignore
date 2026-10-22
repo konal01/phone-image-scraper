@@ -1,0 +1,8 @@
+# Vercel Static Frontend Only - Do not build Python serverless
+requirements.txt
+.python-version
+*.py
+__pycache__
+Dockerfile
+build.sh
+render.yaml
