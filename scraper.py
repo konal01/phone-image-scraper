@@ -384,14 +384,14 @@ async def scrape_flipkart_full_radius(page, query: str, limit: int = 64) -> List
     results = []
     seen = set()
 
-    max_pages = 1 if limit <= 32 else (2 if limit <= 128 else 4)
+    max_pages = 1
     all_cards = []
 
     for page_num in range(1, max_pages + 1):
         search_url = f"https://www.flipkart.com/search?q={encoded}&page={page_num}"
         try:
-            await page.goto(search_url, wait_until="domcontentloaded", timeout=12000)
-            await page.wait_for_timeout(800)
+            await page.goto(search_url, wait_until="domcontentloaded", timeout=10000)
+            await page.wait_for_timeout(300)
 
             cards = await page.eval_on_selector_all(
                 "div[data-id]",
@@ -419,7 +419,7 @@ async def scrape_flipkart_full_radius(page, query: str, limit: int = 64) -> List
                 break
 
             all_cards.extend(cards)
-            if len(all_cards) >= 30:
+            if len(all_cards) >= 20:
                 break
         except Exception:
             break
@@ -443,13 +443,15 @@ async def scrape_flipkart_full_radius(page, query: str, limit: int = 64) -> List
     valid_cards.sort(key=lambda x: x[0], reverse=True)
 
     # 1. Deep Dive into top matching products to extract ALL faces / angles
-    top_targets = valid_cards[:4]
+    # Top 2 products give all 12-16 angles across the 2 primary colorways
+    deep_count = 3 if limit >= 48 else 2
+    top_targets = valid_cards[:deep_count]
     for score, card in top_targets:
         if len(results) >= limit:
             break
         try:
-            await page.goto(card["href"], wait_until="domcontentloaded", timeout=12000)
-            await page.wait_for_timeout(700)
+            await page.goto(card["href"], wait_until="domcontentloaded", timeout=10000)
+            await page.wait_for_timeout(300)
 
             detailed_title = await page.eval_on_selector('span.B_NuCI, h1', 'el => el.innerText') or card["title"]
 
@@ -1459,8 +1461,11 @@ async def scrape_phones(
         def should_continue():
             if len(results) >= limit:
                 return False
-            # If we already have 24+ results and spent > 40 seconds, return promptly
-            if len(results) >= 24 and (time.time() - start_time) > 40.0:
+            # When searching All, if we already have 16+ rich images with angles, stop early to keep search snappy (<10s)
+            if is_all and len(results) >= 16:
+                return False
+            # If total time exceeds 20 seconds and we have results, return promptly
+            if len(results) >= 12 and (time.time() - start_time) > 20.0:
                 return False
             return True
 
