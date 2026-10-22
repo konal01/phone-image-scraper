@@ -1431,18 +1431,6 @@ async def scrape_phones(
         )
         page = await context.new_page()
 
-        # Block media, fonts, and trackers to save 80% RAM and speed up page loads 5x
-        async def handle_route(route):
-            req = route.request
-            rtype = req.resource_type
-            url_lower = req.url.lower()
-            if rtype in ("media", "font") or any(t in url_lower for t in ("google-analytics", "doubleclick", "facebook.net", "clarity.ms", "hotjar", "adsystem", "googletagmanager")):
-                await route.abort()
-            else:
-                await route.continue_()
-
-        await page.route("**/*", handle_route)
-
         start_time = time.time()
         results: List[Dict[str, str]] = []
         seen_urls: Set[str] = set()
@@ -1471,8 +1459,8 @@ async def scrape_phones(
         def should_continue():
             if len(results) >= limit:
                 return False
-            # If we already have 12+ results and spent > 22 seconds, return promptly
-            if len(results) >= 12 and (time.time() - start_time) > 22.0:
+            # If we already have 24+ results and spent > 40 seconds, return promptly
+            if len(results) >= 24 and (time.time() - start_time) > 40.0:
                 return False
             return True
 
