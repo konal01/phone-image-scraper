@@ -121,7 +121,19 @@ def detect_brand_info(query: str, title: str = "") -> Dict[str, str]:
     return {"name": "", "domain": ""}
 
 
-FACE_SEQUENCE = ["Front", "Back", "Camera", "Side", "Angle_3D", "Display_On", "Profile_Left", "Profile_Right", "Packaging"]
+FACE_SEQUENCE = [
+    "Front",
+    "Back",
+    "Side_Right",
+    "Side_Left",
+    "Edge_Top_Bottom",
+    "Angle_3D",
+    "Camera_Macro",
+    "Profile_Angle",
+    "Display_On",
+    "Accessories",
+    "Packaging"
+]
 
 
 def clean_search_query(q: str) -> str:
@@ -506,8 +518,8 @@ async def scrape_flipkart_full_radius(page, query: str, limit: int = 64) -> List
     valid_cards.sort(key=lambda x: x[0], reverse=True)
 
     # 1. Deep Dive into top matching products to extract ALL faces / angles
-    # Top 2 products give all 12-16 angles across the 2 primary colorways
-    deep_count = 3 if limit >= 48 else 2
+    # Top 3-4 products give all side profiles, edges, angles, and colorways
+    deep_count = 4 if limit >= 48 else 2
     top_targets = valid_cards[:deep_count]
     for score, card in top_targets:
         if len(results) >= limit:
@@ -529,8 +541,8 @@ async def scrape_flipkart_full_radius(page, query: str, limit: int = 64) -> List
                 const items = [];
                 const seen_src = new Set();
                 
-                // 1. Primary gallery faces
-                const galleryImgs = document.querySelectorAll('picture img, div[class*="OfydJ4"] img, ul li img');
+                // 1. Primary gallery faces (including side profiles, edges, back, front)
+                const galleryImgs = document.querySelectorAll('picture img, div[class*="OfydJ4"] img, ul li img, div[class*="_2r_T1I"] img');
                 galleryImgs.forEach((img, idx) => {
                     const s = img.src || img.getAttribute('data-src') || '';
                     if (!s || !s.includes('rukminim') || s.includes('/promos/') || s.includes('/www/')) return;
@@ -581,12 +593,12 @@ async def scrape_flipkart_full_radius(page, query: str, limit: int = 64) -> List
                     seen.add(high_res)
                     role = item.get("role", "gallery")
                     if role == "gallery":
-                        angle = FACE_SEQUENCE[gallery_count] if gallery_count < len(FACE_SEQUENCE) else f"Angle_{gallery_count + 1:02d}"
+                        angle = FACE_SEQUENCE[gallery_count] if gallery_count < len(FACE_SEQUENCE) else f"View_{gallery_count + 1:02d}"
                         gallery_count += 1
                     elif role == "feature_plate":
                         angle = "Feature_Plate"
                     else:
-                        angle = "Color_Lineup"
+                        angle = "Variant_Angle"
 
                     meta = extract_detailed_naming(
                         title=detailed_title,
@@ -622,7 +634,7 @@ async def scrape_flipkart_full_radius(page, query: str, limit: int = 64) -> List
                 title=card["title"],
                 query=query,
                 index=len(results) + 1,
-                angle_hint="Front",
+                angle_hint="Catalog_Shot",
                 source_hint="Flipkart"
             )
             results.append({
@@ -633,7 +645,8 @@ async def scrape_flipkart_full_radius(page, query: str, limit: int = 64) -> List
                 "color": meta["color"],
                 "storage": meta["storage"],
                 "angle": meta["angle"],
-                "model": meta["model"]
+                "model": meta["model"],
+                "media_type": "image"
             })
 
     return results
@@ -805,7 +818,7 @@ async def scrape_amazon_full_radius(page, query: str, limit: int = 30) -> List[D
                     title=item["title"],
                     query=query,
                     index=len(results) + 1,
-                    angle_hint="Front",
+                    angle_hint="Catalog_Shot",
                     source_hint="Amazon"
                 )
                 results.append({
@@ -880,7 +893,7 @@ async def scrape_cashify_full_radius(page, query: str, limit: int = 30) -> List[
                             title=title,
                             query=query,
                             index=len(results) + 1,
-                            angle_hint="Front",
+                            angle_hint="Catalog_Shot",
                             source_hint="Cashify"
                         )
                         results.append({

@@ -221,8 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     media: 'all',
     color: 'all',
     storage: 'all',
-    size: 'all',
-    angle: 'all'
+    size: 'all'
   };
 
   const COLOR_HEX_MAP = {
@@ -703,14 +702,15 @@ document.addEventListener('DOMContentLoaded', () => {
     applyFilters();
   });
 
-  sidebarAngleList.addEventListener('click', (e) => {
-    const pill = e.target.closest('.sidebar-pill');
-    if (!pill) return;
-    sidebarAngleList.querySelectorAll('.sidebar-pill').forEach(p => p.classList.remove('active'));
-    pill.classList.add('active');
-    activeFilters.angle = pill.getAttribute('data-angle') || 'all';
-    applyFilters();
-  });
+  if (sidebarAngleList) {
+    sidebarAngleList.addEventListener('click', (e) => {
+      const pill = e.target.closest('.sidebar-pill');
+      if (!pill) return;
+      sidebarAngleList.querySelectorAll('.sidebar-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      applyFilters();
+    });
+  }
 
   resetFiltersBtn.addEventListener('click', () => {
     resetFilters();
@@ -718,7 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function resetFilters() {
-    activeFilters = { media: 'all', color: 'all', storage: 'all', size: 'all', angle: 'all' };
+    activeFilters = { media: 'all', color: 'all', storage: 'all', size: 'all' };
     if (sidebarMediaList) {
       sidebarMediaList.querySelectorAll('.sidebar-pill').forEach(p => {
         p.classList.toggle('active', p.getAttribute('data-media') === 'all');
@@ -735,9 +735,11 @@ document.addEventListener('DOMContentLoaded', () => {
     sidebarSizeList.querySelectorAll('.sidebar-pill').forEach(p => {
       p.classList.toggle('active', p.getAttribute('data-size') === 'all');
     });
-    sidebarAngleList.querySelectorAll('.sidebar-pill').forEach(p => {
-      p.classList.toggle('active', p.getAttribute('data-angle') === 'all');
-    });
+    if (sidebarAngleList) {
+      sidebarAngleList.querySelectorAll('.sidebar-pill').forEach(p => {
+        p.classList.toggle('active', p.getAttribute('data-angle') === 'all');
+      });
+    }
   }
 
   function applyFilters() {
@@ -784,16 +786,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Angle
-      if (activeFilters.angle !== 'all') {
-        const itemAngle = (item.angle || '').toLowerCase();
-        const itemTitle = (item.title || '').toLowerCase();
-        const targetAngle = activeFilters.angle.toLowerCase();
-        if (!itemAngle.includes(targetAngle) && !itemTitle.includes(targetAngle)) {
-          return false;
-        }
-      }
-
       return true;
     });
 
@@ -825,6 +817,26 @@ document.addEventListener('DOMContentLoaded', () => {
     applyFilters();
   }
 
+  function formatViewLabel(angle) {
+    if (!angle) return 'Phone View';
+    const a = angle.trim();
+    if (a === 'Front') return 'Front View';
+    if (a === 'Back') return 'Back View';
+    if (a === 'Side' || a === 'Side_View') return 'Side View';
+    if (a === 'Side_Right' || a === 'Profile_Right') return 'Right Side';
+    if (a === 'Side_Left' || a === 'Profile_Left') return 'Left Side';
+    if (a === 'Edge_Top_Bottom' || a === 'Edge_View') return 'Top & Bottom Edges';
+    if (a === 'Angle_3D') return '3D Angle';
+    if (a === 'Camera' || a === 'Camera_Macro') return 'Camera Close-up';
+    if (a === 'Profile_Angle') return 'Angle Perspective';
+    if (a === 'Display_On') return 'Display On';
+    if (a === 'Feature_Plate') return 'Brand Story';
+    if (a === 'Catalog_Shot' || a === 'Catalog_View') return 'Product Shot';
+    if (a === 'Variant_Angle') return 'Variant View';
+    if (a === 'Packaging') return 'Packaging';
+    return a.replace(/_/g, ' ');
+  }
+
   function createImageCard(item, index) {
     const card = document.createElement('article');
     card.className = 'image-card';
@@ -846,9 +858,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const storageBadgeHtml = (item.storage && item.storage !== 'All') 
       ? `<span class="badge" title="Storage Size: ${escapeHtml(item.storage)}">💾 ${escapeHtml(item.storage)}</span>` 
       : '';
-    const angleBadgeHtml = item.angle === 'Feature_Plate'
-      ? `<span class="badge badge-feature-plate">INFOGRAPHIC</span>`
-      : '';
+    
+    // View Perspective Badge (Displays Front View, Back View, Right Side, Left Side, Edges, etc.)
+    let viewBadgeHtml = '';
+    if (!isVideo && item.angle) {
+      const isFeature = item.angle === 'Feature_Plate';
+      const viewText = formatViewLabel(item.angle);
+      viewBadgeHtml = `<span class="badge ${isFeature ? 'badge-feature-plate' : 'badge-angle'}" title="View Perspective: ${escapeHtml(viewText)}">${escapeHtml(viewText)}</span>`;
+    }
     const filenameText = item.filename || (isVideo ? `phone_video_${index + 1}.mp4` : `phone_image_${index + 1}.jpg`);
     const displayThumb = item.thumbnail || item.url;
 
@@ -857,7 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <img src="${displayThumb}" alt="${escapeHtml(item.title)}" loading="lazy">
         <div class="card-badges">
           <span class="${sourceBadgeClass}">${isVideo ? '▶ VIDEO' : escapeHtml(item.source || 'Web')}</span>
-          ${angleBadgeHtml}
+          ${viewBadgeHtml}
           ${!isVideo ? `<span class="badge badge-color">${escapeHtml(colorText)}</span>` : ''}
         </div>
         <div class="card-hover-overlay">
@@ -1080,7 +1097,7 @@ document.addEventListener('DOMContentLoaded', () => {
     modalColorBadge.textContent = item.color || 'Standard';
 
     if (modalAngleBadge) {
-      modalAngleBadge.textContent = item.angle || 'Front';
+      modalAngleBadge.textContent = item.media_type === 'video' ? '▶ Trailer' : formatViewLabel(item.angle || 'View');
     }
 
     if (modalStorageBadge) {
@@ -1140,26 +1157,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Identify all images and videos belonging to this specific phone
     const targetModel = (item.model || '').toLowerCase().trim();
-    const targetColor = (item.color || '').toLowerCase().trim();
+    const targetBrand = (item.brand || '').toLowerCase().trim();
 
-    // 1. Group exact variant faces first (Front, Back, Camera, Side, Angles of this color)
-    const exactVariantFaces = rawResults.filter(r => {
+    // Include all views belonging to this phone in their natural view order
+    modalPhoneItems = rawResults.filter(r => {
       const rModel = (r.model || '').toLowerCase().trim();
-      const rColor = (r.color || '').toLowerCase().trim();
-      return rModel === targetModel && (targetColor === '' || targetColor === 'standard / official' || rColor === targetColor);
+      return rModel && rModel === targetModel;
     });
-
-    // 2. Also find all other colorways, feature plates, and videos of this model
-    const otherVariantFaces = rawResults.filter(r => {
-      const rModel = (r.model || '').toLowerCase().trim();
-      return rModel === targetModel && !exactVariantFaces.includes(r);
-    });
-
-    modalPhoneItems = [...exactVariantFaces, ...otherVariantFaces];
 
     // Fallback if model was not cleanly isolated
     if (modalPhoneItems.length <= 1 && rawResults.length > 1) {
-      const targetBrand = (item.brand || '').toLowerCase().trim();
       if (targetBrand) {
         modalPhoneItems = rawResults.filter(r => (r.brand || '').toLowerCase().trim() === targetBrand);
       }
@@ -1213,7 +1220,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Label (Angle + Color)
       const label = document.createElement('div');
       label.className = 'thumb-label';
-      const angle = isVid ? '▶ Trailer' : (thumbItem.angle || `View ${idx + 1}`);
+      const angle = isVid ? '▶ Trailer' : formatViewLabel(thumbItem.angle || `View ${idx + 1}`);
       label.textContent = angle;
       label.title = `${angle} • ${thumbItem.color || 'Standard'}`;
 
