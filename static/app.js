@@ -373,6 +373,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (target === 'official') {
       return itemSource.includes('official') || (!itemSource.includes('flipkart') && !itemSource.includes('amazon') && !itemSource.includes('cashify') && !itemSource.includes('fonezone') && !itemSource.includes('gameloot') && !itemSource.includes('triveni') && !itemSource.includes('vlebazaar') && !itemSource.includes('gsmarena'));
     }
+    if (target === 'ebay') return itemSource.includes('ebay');
+    if (target === 'alamy') return itemSource.includes('alamy');
+    if (target === 'indiamart') return itemSource.includes('indiamart');
     if (target === 'gsmarena') return itemSource.includes('gsmarena');
     return true;
   }
