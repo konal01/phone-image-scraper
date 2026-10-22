@@ -535,6 +535,18 @@ body.light-theme {
   background-color: #059669;
 }
 
+.dot-ebay {
+  background-color: #f59e0b;
+}
+
+.dot-alamy {
+  background-color: #ef4444;
+}
+
+.dot-indiamart {
+  background-color: #2563eb;
+}
+
 .source-toggle-label {
   font-size: 12.5px;
   font-weight: 600;
@@ -834,6 +846,87 @@ body.light-theme {
   background: rgba(5, 150, 105, 0.4);
   color: #6ee7b7;
   border: 1px solid rgba(110, 231, 183, 0.3);
+}
+
+/* Active State for eBay */
+.source-toggle-item.active-ebay,
+.source-toggle-item:has(#toggle-ebay:checked) {
+  background: #1e293b;
+  border-color: #f59e0b;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+}
+.source-toggle-item.active-ebay .source-toggle-label,
+.source-toggle-item:has(#toggle-ebay:checked) .source-toggle-label {
+  color: #ffffff;
+}
+.source-toggle-item.active-ebay .source-toggle-switch,
+.source-toggle-item:has(#toggle-ebay:checked) .source-toggle-switch {
+  background-color: #f59e0b;
+}
+.source-toggle-item.active-ebay .source-toggle-thumb,
+.source-toggle-item:has(#toggle-ebay:checked) .source-toggle-thumb {
+  transform: translateX(14px);
+  background-color: #ffffff;
+}
+.source-toggle-item.active-ebay .source-toggle-tag,
+.source-toggle-item:has(#toggle-ebay:checked) .source-toggle-tag {
+  background: rgba(245, 158, 11, 0.4);
+  color: #fde68a;
+  border: 1px solid rgba(253, 230, 138, 0.3);
+}
+
+/* Active State for Alamy */
+.source-toggle-item.active-alamy,
+.source-toggle-item:has(#toggle-alamy:checked) {
+  background: #18181b;
+  border-color: #ef4444;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+}
+.source-toggle-item.active-alamy .source-toggle-label,
+.source-toggle-item:has(#toggle-alamy:checked) .source-toggle-label {
+  color: #ffffff;
+}
+.source-toggle-item.active-alamy .source-toggle-switch,
+.source-toggle-item:has(#toggle-alamy:checked) .source-toggle-switch {
+  background-color: #ef4444;
+}
+.source-toggle-item.active-alamy .source-toggle-thumb,
+.source-toggle-item:has(#toggle-alamy:checked) .source-toggle-thumb {
+  transform: translateX(14px);
+  background-color: #ffffff;
+}
+.source-toggle-item.active-alamy .source-toggle-tag,
+.source-toggle-item:has(#toggle-alamy:checked) .source-toggle-tag {
+  background: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  border: 1px solid rgba(252, 165, 165, 0.3);
+}
+
+/* Active State for IndiaMART */
+.source-toggle-item.active-indiamart,
+.source-toggle-item:has(#toggle-indiamart:checked) {
+  background: #172554;
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+.source-toggle-item.active-indiamart .source-toggle-label,
+.source-toggle-item:has(#toggle-indiamart:checked) .source-toggle-label {
+  color: #ffffff;
+}
+.source-toggle-item.active-indiamart .source-toggle-switch,
+.source-toggle-item:has(#toggle-indiamart:checked) .source-toggle-switch {
+  background-color: #3b82f6;
+}
+.source-toggle-item.active-indiamart .source-toggle-thumb,
+.source-toggle-item:has(#toggle-indiamart:checked) .source-toggle-thumb {
+  transform: translateX(14px);
+  background-color: #ffffff;
+}
+.source-toggle-item.active-indiamart .source-toggle-tag,
+.source-toggle-item:has(#toggle-indiamart:checked) .source-toggle-tag {
+  background: rgba(59, 130, 246, 0.4);
+  color: #bfdbfe;
+  border: 1px solid rgba(191, 219, 254, 0.3);
 }
 
 .quick-tags {
